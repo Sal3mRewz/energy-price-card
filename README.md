@@ -69,7 +69,7 @@ Bands are checked from top to bottom, and the first match wins. Put more specifi
 
 ```sh
 npm install
-npm run build   # minifies src/ → dist/energy-price-card.js
+npm run build   # minifies src/ → dist/energy-price-card.js (commit this file)
 npm run watch   # rebuild on change
 ```
 
