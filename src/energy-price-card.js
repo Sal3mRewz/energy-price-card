@@ -87,6 +87,7 @@ class EnergyPriceCard extends HTMLElement {
       show_next: config.show_next !== false,
       show_schedule: config.show_schedule === true,
       show_peak: config.show_peak !== false,
+      show_cheapest: config.show_cheapest !== false,
       peak_hours: config.peak_hours ?? 48,
       rates,
     };
@@ -189,16 +190,29 @@ class EnergyPriceCard extends HTMLElement {
     return null;
   }
 
-  // Highest price between now and `hours` ahead, and when it first starts.
-  _peakAhead(now, current, hours) {
+  // Highest (or lowest) price between now and `hours` ahead, and when it
+  // first starts. `better(a, b)` is true when price a beats price b.
+  _extremeAhead(now, current, hours, better) {
     const limit = new Date(now.getTime() + hours * 3600 * 1000);
-    let peak = current ? { when: now, rate: current } : null;
+    let best = current ? { when: now, rate: current } : null;
     for (const when of this._boundaries(now, Math.ceil(hours / 24) + 1)) {
       if (when >= limit) break;
       const rate = this._rateAt(when);
-      if (rate && (!peak || rate.price > peak.rate.price)) peak = { when, rate };
+      if (rate && (!best || better(rate.price, best.rate.price))) best = { when, rate };
     }
-    return peak;
+    return best;
+  }
+
+  _aheadHtml(title, found, now) {
+    if (!found) return "";
+    return `<div class="peak">
+           <span>${title} in next ${this._config.peak_hours}h</span>
+           <span>
+             <strong style="color:${this._colorFor(found.rate)}">${this._formatPrice(found.rate.price)}</strong>
+             ${found.when === now ? "now" : `at ${this._formatTime(found.when, now)}`}
+             ${found.rate.label ? `(${found.rate.label})` : ""}
+           </span>
+         </div>`;
   }
 
   _formatPrice(price) {
@@ -252,18 +266,12 @@ class EnergyPriceCard extends HTMLElement {
          </div>`
       : "";
 
-    const peak = this._config.show_peak
-      ? this._peakAhead(now, current, this._config.peak_hours)
-      : null;
-    const peakHtml = peak
-      ? `<div class="peak">
-           <span>Highest in next ${this._config.peak_hours}h</span>
-           <span>
-             <strong style="color:${this._colorFor(peak.rate)}">${this._formatPrice(peak.rate.price)}</strong>
-             ${peak.when === now ? "now" : `at ${this._formatTime(peak.when, now)}`}
-             ${peak.rate.label ? `(${peak.rate.label})` : ""}
-           </span>
-         </div>`
+    const { show_peak, show_cheapest, peak_hours } = this._config;
+    const peakHtml = show_peak
+      ? this._aheadHtml("Highest", this._extremeAhead(now, current, peak_hours, (a, b) => a > b), now)
+      : "";
+    const cheapestHtml = show_cheapest
+      ? this._aheadHtml("Lowest", this._extremeAhead(now, current, peak_hours, (a, b) => a < b), now)
       : "";
 
     const scheduleHtml = this._config.show_schedule
@@ -318,6 +326,7 @@ class EnergyPriceCard extends HTMLElement {
         </div>
         ${nextHtml}
         ${peakHtml}
+        ${cheapestHtml}
         ${scheduleHtml}
       </ha-card>
     `;
@@ -419,7 +428,7 @@ class EnergyPriceCardEditor extends HTMLElement {
       this._setOption("thresholds", Object.keys(thresholds).length ? thresholds : undefined);
     } else if (key === "show_next") {
       this._setOption(key, el.checked, true);
-    } else if (key === "show_peak") {
+    } else if (key === "show_peak" || key === "show_cheapest") {
       this._setOption(key, el.checked, true);
     } else if (key === "peak_hours") {
       this._setOption(key, number, 48);
@@ -551,6 +560,7 @@ class EnergyPriceCardEditor extends HTMLElement {
         <label>Red from (p)<input type="number" step="0.01" data-key="thresholds.high" value="${thresholds.high}"></label>
         <label class="check"><input type="checkbox" data-key="show_next" ${c.show_next !== false ? "checked" : ""}>Show next price change</label>
         <label class="check"><input type="checkbox" data-key="show_peak" ${c.show_peak !== false ? "checked" : ""}>Show highest upcoming price</label>
+        <label class="check"><input type="checkbox" data-key="show_cheapest" ${c.show_cheapest !== false ? "checked" : ""}>Show lowest upcoming price</label>
         <label>Look ahead (hours)<input type="number" min="1" max="168" data-key="peak_hours" value="${escapeHtml(c.peak_hours ?? 48)}"></label>
         <label class="check"><input type="checkbox" data-key="show_schedule" ${c.show_schedule ? "checked" : ""}>Show full schedule</label>
       </div>

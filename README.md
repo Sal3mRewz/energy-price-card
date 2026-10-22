@@ -1,6 +1,6 @@
 # Energy Price Card
 
-A Home Assistant Lovelace card that shows the current electricity price (GBP) from a fixed schedule of time-of-use bands. It switches automatically when a band starts or ends, and can show the next price change, the highest upcoming price and the full schedule.
+A Home Assistant Lovelace card that shows the current electricity price (GBP) from a fixed schedule of time-of-use bands. It switches automatically when a band starts or ends, and can show the next price change, the highest and lowest upcoming prices and the full schedule.
 
 It has a visual editor, so you can set it up entirely from the dashboard UI.
 
@@ -48,7 +48,8 @@ rates:
 | `thresholds.high` | `30` | Prices from this are red |
 | `show_next` | `true` | Show the next price change |
 | `show_peak` | `true` | Show the highest upcoming price |
-| `peak_hours` | `48` | How far ahead to look for the highest price |
+| `show_cheapest` | `true` | Show the lowest upcoming price |
+| `peak_hours` | `48` | How far ahead to look for the highest and lowest prices |
 | `show_schedule` | `false` | Show the full schedule |
 | `rates` | `[]` | List of price bands (below) |
 
